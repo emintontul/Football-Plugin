@@ -1,0 +1,25 @@
+{
+  "$schema": "https://docs.gethippo.ai/schemas/plugin-manifest/v1.json",
+  "schemaVersion": "1",
+  "id": "com.example.football-predictions",
+  "name": "Football Predictions",
+  "shortName": "Football",
+  "description": "Predict match outcomes and compete on the global leaderboard.",
+  "version": "0.1.0",
+  "icon": {
+    "src": "./assets/icon-192.png",
+    "sizes": "192x192",
+    "type": "image/png"
+  },
+  "entryPoint": "./index.html",
+  "permissions": [
+    "user.read",
+    "auth.token"
+  ],
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "backgroundColor": "#ffffff",
+  "themeColor": "#2563eb",
+  "categories": ["sports", "games"],
+  "minHippoVersion": "1.0.0"
+}

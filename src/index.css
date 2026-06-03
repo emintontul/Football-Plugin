@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Default light theme — overridden at runtime by useHippoTheme */
+  --hippo-bg: #ffffff;
+  --hippo-fg: #111827;
+  --hippo-primary: #2563eb;
+  --hippo-primary-fg: #ffffff;
+  --hippo-secondary: #f3f4f6;
+  --hippo-secondary-fg: #374151;
+  --hippo-surface: #f9fafb;
+  --hippo-border: #e5e7eb;
+  --hippo-muted: #6b7280;
+  --hippo-muted-fg: #9ca3af;
+  --hippo-error: #ef4444;
+  --hippo-success: #22c55e;
+}
+
+.dark {
+  --hippo-bg: #0f172a;
+  --hippo-fg: #f1f5f9;
+  --hippo-primary: #3b82f6;
+  --hippo-primary-fg: #ffffff;
+  --hippo-secondary: #1e293b;
+  --hippo-secondary-fg: #cbd5e1;
+  --hippo-surface: #1e293b;
+  --hippo-border: #334155;
+  --hippo-muted: #94a3b8;
+  --hippo-muted-fg: #64748b;
+  --hippo-error: #f87171;
+  --hippo-success: #4ade80;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
