@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -6,8 +8,9 @@
   /* Default light theme — overridden at runtime by useHippoTheme */
   --hippo-bg: #ffffff;
   --hippo-fg: #111827;
-  --hippo-primary: #2563eb;
+  --hippo-primary: #7c3aed;
   --hippo-primary-fg: #ffffff;
+  --hippo-primary-light: #f3eefe;
   --hippo-secondary: #f3f4f6;
   --hippo-secondary-fg: #374151;
   --hippo-surface: #f9fafb;
@@ -16,13 +19,22 @@
   --hippo-muted-fg: #9ca3af;
   --hippo-error: #ef4444;
   --hippo-success: #22c55e;
+  --hippo-live: #ef4444;
+  --hippo-warn-bg: #fef9c3;
+  --hippo-warn-fg: #a16207;
+  --hippo-radius: 12px;
+  --hippo-radius-sm: 6px;
+  --hippo-radius-md: 8px;
+  --hippo-radius-pill: 9999px;
+  --hippo-font: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
 .dark {
   --hippo-bg: #0f172a;
   --hippo-fg: #f1f5f9;
-  --hippo-primary: #3b82f6;
+  --hippo-primary: #7c3aed;
   --hippo-primary-fg: #ffffff;
+  --hippo-primary-light: rgba(124, 58, 237, 0.12);
   --hippo-secondary: #1e293b;
   --hippo-secondary-fg: #cbd5e1;
   --hippo-surface: #1e293b;
@@ -31,10 +43,54 @@
   --hippo-muted-fg: #64748b;
   --hippo-error: #f87171;
   --hippo-success: #4ade80;
+  --hippo-live: #f87171;
+  --hippo-warn-bg: #422006;
+  --hippo-warn-fg: #fbbf24;
 }
 
 * {
   -webkit-tap-highlight-color: transparent;
+}
+
+/* Dark mode: smooth color transitions only while theme is switching */
+html.theme-changing * {
+  transition: background-color 400ms ease, color 400ms ease, border-color 400ms ease !important;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+@keyframes pulseLive {
+  0%, 100% { transform: scale(1);   opacity: 1; }
+  50%       { transform: scale(1.8); opacity: 0; }
+}
+
+@keyframes scoreBump {
+  0%   { transform: scale(1);    }
+  40%  { transform: scale(1.28); }
+  70%  { transform: scale(0.91); }
+  100% { transform: scale(1);    }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(28px); }
+  to   { opacity: 1; transform: translateX(0);    }
+}
+
+@keyframes dropdownIn {
+  from { opacity: 0; transform: scale(0.94) translateY(-6px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0);    }
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: scale(0.84) translateY(14px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0);    }
 }
 
 html,

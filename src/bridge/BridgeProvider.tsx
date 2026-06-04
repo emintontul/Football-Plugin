@@ -2,11 +2,11 @@ import React, { createContext, useContext, useEffect, useRef, useState } from 'r
 import { tryLoadSDKBridge } from './HippoSDKBridge';
 import { PostMessageBridge } from './PostMessageBridge';
 import { MockBridge } from './MockBridge';
-import type { HippoBridge } from './types';
+import type { HippoBridge, BridgeType } from './types';
 
 type BridgeContextValue = {
   bridge: HippoBridge;
-  bridgeType: 'sdk' | 'postmessage' | 'mock';
+  bridgeType: BridgeType;
 };
 
 const BridgeContext = createContext<BridgeContextValue | null>(null);
@@ -18,18 +18,22 @@ export function useBridge(): BridgeContextValue {
 }
 
 async function detectBridge(): Promise<BridgeContextValue> {
-  const forceMock = import.meta.env.VITE_MOCK_MODE === 'true';
-
-  if (!forceMock) {
+  if (import.meta.env.VITE_MOCK_MODE !== 'true') {
     const sdkBridge = await tryLoadSDKBridge();
     if (sdkBridge) return { bridge: sdkBridge, bridgeType: 'sdk' };
 
-    if (typeof window !== 'undefined' && window.ReactNativeWebView) {
+    if (window.ReactNativeWebView) {
       return { bridge: new PostMessageBridge(), bridgeType: 'postmessage' };
     }
   }
 
-  console.warn('[BridgeProvider] No Hippo host detected — using MockBridge. Set VITE_MOCK_MODE=true to silence this in dev.');
+  if (import.meta.env.MODE === 'production') {
+    throw new Error('[BridgeProvider] No Hippo host detected in production build. MockBridge is not allowed in production.');
+  }
+
+  if (import.meta.env.VITE_MOCK_MODE !== 'true') {
+    console.warn('[BridgeProvider] No Hippo host detected — using MockBridge. Set VITE_MOCK_MODE=true to silence this.');
+  }
   return { bridge: new MockBridge(), bridgeType: 'mock' };
 }
 
@@ -42,8 +46,9 @@ export function BridgeProvider({ children }: Props) {
   useEffect(() => {
     if (detected.current) return;
     detected.current = true;
-
-    detectBridge().then(setCtx);
+    detectBridge().then(setCtx).catch((err: unknown) => {
+      console.error(err);
+    });
   }, []);
 
   if (!ctx) return null;

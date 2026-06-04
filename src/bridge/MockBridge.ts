@@ -29,7 +29,11 @@ export class MockBridge implements HippoBridge {
   }
 
   async getToken(): Promise<string> {
-    return 'mock-token-abc123';
+    return import.meta.env.VITE_DEV_TOKEN ?? 'mock-token-abc123';
+  }
+
+  async getLocale(): Promise<string> {
+    return navigator.language ?? 'tr';
   }
 
   async getTheme() {
@@ -41,11 +45,11 @@ export class MockBridge implements HippoBridge {
   }
 
   haptic(type: 'light' | 'medium' | 'success' | 'error'): void {
-    console.log(`[MockBridge] haptic: ${type}`);
+    console.log(`[MockBridge] haptic(${type})`);
   }
 
-  close(): void {
-    console.log('[MockBridge] close()');
+  dismiss(): void {
+    console.log('[MockBridge] dismiss()');
   }
 
   on<T>(event: string, handler: (payload: T) => void): () => void {

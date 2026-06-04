@@ -31,6 +31,7 @@ export function useHippoTheme() {
       'THEME_CHANGE',
       (payload) => {
         const root = document.documentElement;
+        root.classList.add('theme-changing');
         Object.entries(payload.tokens).forEach(([key, value]) => {
           root.style.setProperty(key, value);
         });
@@ -39,6 +40,7 @@ export function useHippoTheme() {
         } else {
           root.classList.remove('dark');
         }
+        setTimeout(() => root.classList.remove('theme-changing'), 450);
       },
     );
   }, [bridge]);

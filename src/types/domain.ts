@@ -17,6 +17,26 @@ export interface Match {
   round?: string;
   homeScore?: number;
   awayScore?: number;
+  minute?: number;
+  injuryTime?: number;
+  halfTimeHome?: number;
+  halfTimeAway?: number;
+}
+
+export interface H2HMatch {
+  date: string;
+  homeTeamName: string;
+  awayTeamName: string;
+  homeScore: number;
+  awayScore: number;
+  competition: string;
+}
+
+export interface HeadToHead {
+  homeTeamWins: number;
+  awayTeamWins: number;
+  draws: number;
+  recentMatches: H2HMatch[];
 }
 
 export type PredictionOutcome = 'home' | 'draw' | 'away';

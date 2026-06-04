@@ -7,6 +7,7 @@ import { setBridgeForClient } from './api/client';
 import { useHippoTheme } from './hooks/useHippoTheme';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
 import { Spinner } from './components/ui/Spinner';
+import { TranslationProvider } from './i18n/TranslationProvider';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -63,7 +64,9 @@ export function App() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <BridgeHandshake>
-          <RouterProvider router={router} />
+          <TranslationProvider>
+            <RouterProvider router={router} />
+          </TranslationProvider>
         </BridgeHandshake>
       </QueryClientProvider>
     </ErrorBoundary>

@@ -1,145 +1,128 @@
-import { z } from 'zod';
-import {
-  IncomingMessageSchema,
-  TokenPayloadSchema,
-  ThemePayloadSchema,
-  UserPayloadSchema,
-  type HippoBridge,
-  type IncomingMessage,
-  type OutgoingMessage,
-} from './types';
+import type { HippoBridge } from './types';
+import { BridgeError, BridgeTimeoutError } from './types';
 
-const REQUEST_TIMEOUT_MS = 10_000;
+const TIMEOUT_MS = 10_000;
 
-function generateId(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+function genId(): string {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
-type PendingRequest = {
-  resolve: (msg: IncomingMessage) => void;
-  reject: (err: Error) => void;
-  timer: ReturnType<typeof setTimeout>;
+type OutgoingMessage = { id: string; type: string; payload?: unknown };
+
+type IncomingMessage = {
+  id: string;
+  type: 'RESPONSE' | 'EVENT';
+  success: boolean;
+  payload?: unknown;
+  error?: string;
 };
 
-type EventHandler<T = unknown> = (payload: T) => void;
+type PendingEntry = { resolve: (v: unknown) => void; reject: (e: Error) => void };
 
 export class PostMessageBridge implements HippoBridge {
-  private pending = new Map<string, PendingRequest>();
-  private eventHandlers = new Map<string, Set<EventHandler>>();
-  private removeListeners: (() => void) | null = null;
+  private pending = new Map<string, PendingEntry>();
+  private handlers = new Map<string, Set<(payload: unknown) => void>>();
 
   constructor() {
-    this.attachListeners();
+    window.addEventListener('message', this.handleMessage);
   }
 
-  private attachListeners() {
-    const handler = (e: MessageEvent) => this.handleIncoming(e);
-    window.addEventListener('message', handler);
-    document.addEventListener('message', handler as EventListener);
-    this.removeListeners = () => {
-      window.removeEventListener('message', handler);
-      document.removeEventListener('message', handler as EventListener);
-    };
-  }
-
-  private handleIncoming(e: MessageEvent) {
-    let raw: unknown;
+  private handleMessage = (event: MessageEvent): void => {
+    let msg: unknown;
     try {
-      raw = typeof e.data === 'string' ? JSON.parse(e.data) : e.data;
+      msg = typeof event.data === 'string' ? (JSON.parse(event.data) as unknown) : event.data;
     } catch {
       return;
     }
 
-    const result = IncomingMessageSchema.safeParse(raw);
-    if (!result.success) return;
+    if (typeof msg !== 'object' || msg === null) return;
+    const m = msg as Record<string, unknown>;
+    if (typeof m['id'] !== 'string' || typeof m['type'] !== 'string') return;
 
-    const msg = result.data;
+    const incoming = msg as IncomingMessage;
 
-    if (msg.type === 'EVENT') {
-      const handlers = this.eventHandlers.get(msg.id);
-      if (handlers) handlers.forEach((h) => h(msg.payload));
+    if (incoming.type === 'RESPONSE') {
+      const entry = this.pending.get(incoming.id);
+      if (!entry) return;
+      this.pending.delete(incoming.id);
+      if (incoming.success) {
+        entry.resolve(incoming.payload);
+      } else {
+        entry.reject(new BridgeError(incoming.error ?? 'Bridge request failed'));
+      }
       return;
     }
 
-    const pending = this.pending.get(msg.id);
-    if (!pending) return;
-
-    clearTimeout(pending.timer);
-    this.pending.delete(msg.id);
-
-    if (msg.error) {
-      pending.reject(new Error(`[PostMessageBridge] ${msg.error.code}: ${msg.error.message}`));
-    } else {
-      pending.resolve(msg);
+    if (incoming.type === 'EVENT') {
+      // For events, `id` carries the event name (e.g. 'THEME_CHANGED')
+      const handlers = this.handlers.get(incoming.id);
+      if (handlers) handlers.forEach((h) => h(incoming.payload));
     }
+  };
+
+  private post(type: string, payload?: unknown): void {
+    const msg: OutgoingMessage = { id: genId(), type, payload };
+    window.ReactNativeWebView?.postMessage(JSON.stringify(msg));
   }
 
-  private send(type: string, payload?: unknown): Promise<IncomingMessage> {
-    return new Promise((resolve, reject) => {
-      const id = generateId();
-      const message: OutgoingMessage = { id, type, payload };
+  private request<T>(type: string, payload?: unknown): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const id = genId();
+      const msg: OutgoingMessage = { id, type, payload };
 
       const timer = setTimeout(() => {
         this.pending.delete(id);
-        reject(new Error(`[PostMessageBridge] Request "${type}" timed out after ${REQUEST_TIMEOUT_MS}ms`));
-      }, REQUEST_TIMEOUT_MS);
+        reject(new BridgeTimeoutError(type));
+      }, TIMEOUT_MS);
 
-      this.pending.set(id, { resolve, reject, timer });
-      window.ReactNativeWebView!.postMessage(JSON.stringify(message));
+      this.pending.set(id, {
+        resolve: (v) => { clearTimeout(timer); resolve(v as T); },
+        reject: (e) => { clearTimeout(timer); reject(e); },
+      });
+
+      window.ReactNativeWebView?.postMessage(JSON.stringify(msg));
     });
   }
 
   async isReady(): Promise<void> {
-    await this.send('READY');
+    // window.ReactNativeWebView is already present when this bridge is instantiated
   }
 
   async getUser() {
-    const msg = await this.send('GET_USER');
-    return UserPayloadSchema.parse(msg.payload);
+    return this.request<{ id: string; displayName: string; avatarUrl?: string }>('GET_USER');
   }
 
   async getToken(): Promise<string> {
-    const msg = await this.send('GET_TOKEN');
-    return TokenPayloadSchema.parse(msg.payload).token;
+    return this.request<string>('GET_TOKEN');
+  }
+
+  async getLocale(): Promise<string> {
+    try {
+      return await this.request<string>('GET_LOCALE');
+    } catch {
+      return navigator.language ?? 'tr';
+    }
   }
 
   async getTheme() {
-    const msg = await this.send('GET_THEME');
-    return ThemePayloadSchema.parse(msg.payload);
+    return this.request<{ mode: 'light' | 'dark'; tokens: Record<string, string> }>('GET_THEME');
   }
 
   showToast(message: string, type: 'success' | 'error' | 'info' = 'info'): void {
-    const id = generateId();
-    window.ReactNativeWebView!.postMessage(JSON.stringify({ id, type: 'SHOW_TOAST', payload: { message, type } }));
+    this.post('SHOW_TOAST', { message, type });
   }
 
   haptic(type: 'light' | 'medium' | 'success' | 'error'): void {
-    const id = generateId();
-    window.ReactNativeWebView!.postMessage(JSON.stringify({ id, type: 'HAPTIC', payload: { type } }));
+    this.post('HAPTIC', { type });
   }
 
-  close(): void {
-    const id = generateId();
-    window.ReactNativeWebView!.postMessage(JSON.stringify({ id, type: 'CLOSE' }));
+  dismiss(): void {
+    this.post('CLOSE');
   }
 
   on<T>(event: string, handler: (payload: T) => void): () => void {
-    if (!this.eventHandlers.has(event)) this.eventHandlers.set(event, new Set());
-    const handlers = this.eventHandlers.get(event)!;
-    handlers.add(handler as EventHandler);
-    return () => handlers.delete(handler as EventHandler);
+    if (!this.handlers.has(event)) this.handlers.set(event, new Set());
+    this.handlers.get(event)!.add(handler as (payload: unknown) => void);
+    return () => this.handlers.get(event)?.delete(handler as (payload: unknown) => void);
   }
-
-  destroy() {
-    this.removeListeners?.();
-    this.pending.forEach(({ reject, timer }) => {
-      clearTimeout(timer);
-      reject(new Error('[PostMessageBridge] destroyed'));
-    });
-    this.pending.clear();
-  }
-}
-
-export function validateIncomingPayload<T>(schema: z.ZodType<T>, payload: unknown): T {
-  return schema.parse(payload);
 }

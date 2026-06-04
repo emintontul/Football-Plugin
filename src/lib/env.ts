@@ -1,17 +1,12 @@
 import { z } from 'zod';
 
 const EnvSchema = z.object({
-  VITE_API_BASE_URL: z.string().url({ message: 'VITE_API_BASE_URL must be a valid URL' }),
-  VITE_MOCK_MODE: z
-    .enum(['true', 'false'])
-    .default('false')
-    .catch('false'),
+  VITE_API_BASE_URL: z.string().url().catch('http://localhost:3000'),
 });
 
 function parseEnv() {
   const result = EnvSchema.safeParse({
     VITE_API_BASE_URL: import.meta.env.VITE_API_BASE_URL,
-    VITE_MOCK_MODE: import.meta.env.VITE_MOCK_MODE,
   });
 
   if (!result.success) {

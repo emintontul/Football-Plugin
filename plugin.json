@@ -1,0 +1,30 @@
+{
+  "slug": "football-predictions",
+  "name": "Football Predictions",
+  "version": "0.1.0",
+  "description": "Predict match outcomes and compete on the global leaderboard.",
+  "icon": "⚽",
+  "category": "utility",
+  "author": "MelihYildiz",
+  "permissions": ["ui:sidebar"],
+  "i18n": {
+    "tr": { "name": "Futbol Tahminleri" },
+    "en": { "name": "Football Predictions" }
+  },
+  "ui": {
+    "pages": [
+      {
+        "path": "main",
+        "title": { "tr": "Maçlar", "en": "Fixtures" },
+        "icon": "calendar",
+        "sidebar": true
+      },
+      {
+        "path": "leaderboard",
+        "title": { "tr": "Sıralama", "en": "Leaderboard" },
+        "icon": "trophy",
+        "sidebar": true
+      }
+    ]
+  }
+}

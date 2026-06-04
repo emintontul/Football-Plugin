@@ -16,7 +16,11 @@ const LeaderboardResponseSchema = z.object({
   total: z.number().int(),
 });
 
-export async function fetchLeaderboard(page = 1, limit = 50) {
-  const res = await apiClient.get('/leaderboard', { params: { page, limit } });
+export type LeaderboardPeriod = 'all' | 'weekly' | 'monthly';
+
+export async function fetchLeaderboard(page = 1, limit = 50, period: LeaderboardPeriod = 'all') {
+  const params: Record<string, unknown> = { page, limit };
+  if (period !== 'all') params['period'] = period;
+  const res = await apiClient.get('/leaderboard', { params });
   return LeaderboardResponseSchema.parse(res.data);
 }

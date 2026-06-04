@@ -1,136 +1,186 @@
-# Hippo Football Predictions Plugin
 
-A football match prediction game with a global leaderboard, built as a Hippo super-app plugin.
+  İki ayrı proje birlikte çalışıyor:
 
----
+  [Hippo Mobil App]
+        │
+        │  SDK / PostMessage / WebView
+        ▼
+  [Plugin — React/Vite]  ←──── HTTP ────→  [API — Hono/Node]
+    (bu repo)                                (Hippo-Football-API)
+                                                    │
+                                            [PostgreSQL DB]
+                                                    │
+                                       [football-data.org API]
 
-## Running in Each Mode
+  Plugin, Hippo'nun mobil uygulaması içinde bir mini-app olarak çalışıyor. Bağımsız bir web uygulaması değil — host uygulamanın içine gömülü.
 
-### 1. Browser dev (MockBridge)
+  ---
+  Plugin Tarafı (Frontend)
 
-```bash
-cp .env.example .env.local
-# Edit .env.local — set VITE_API_BASE_URL to your local API or a staging URL
-npm install
-npm run dev
-```
+  Bridge Sistemi — Host'a Bağlanma
 
-Opens at `http://localhost:5173`. The app detects no Hippo host and falls back to **MockBridge**, which returns a fake user and token. A warning is printed to the console.
+  Plugin açıldığında ilk iş host'u tanımak:
 
-To suppress the warning and explicitly opt into mocks:
+  tryLoadSDKBridge()        → Hippo web SDK varsa bağlan
+    ↓ başarısız
+  window.ReactNativeWebView → React Native WebView'daysa PostMessage kullan
+    ↓ yok
+  MockBridge                → Geliştirme ortamı (production'da hata fırlatır)
 
-```
-VITE_MOCK_MODE=true
-```
+  Bridge üzerinden 4 şey alınır: kullanıcı bilgisi, auth token, tema (dark/light + CSS değişkenleri), locale (dil).
 
-### 2. Simulated WebView (PostMessageBridge)
+  Tema Sistemi
 
-```bash
-npm run dev:webview   # runs: vite --mode webview
-```
+  useHippoTheme() hook'u bridge'den CSS token'larını alır ve document.documentElement'e CSS custom property olarak yazar. Tüm renkler --hippo-primary, --hippo-bg gibi değişkenlerden gelir —
+  Tailwind'deki bg-hippo-primary bunları okur. Bu sayede Hippo'nun tema değişikliği anında plugine yansır.
 
-Uses `vite.config.ts` mode overrides (add `mode: 'webview'` env vars as needed). The app still uses MockBridge unless you inject `window.ReactNativeWebView` — e.g. via a browser extension or a local wrapper HTML that emulates the RN WebView interface.
+  i18n
 
-### 3. Inside Hippo (production)
+  Bridge'den locale ('tr', 'en-US' vb.) alınır. locales/tr.json ve locales/en.json'dan string'ler yüklenir. t('key', { param: value }) şeklinde kullanılır. Intl.DateTimeFormat çağrıları da locale'e göre
+   çalışır.
 
-Build and deploy to the Hippo plugin store:
+  Routing
 
-```bash
-npm run build         # outputs to dist/
-```
+  / → /fixtures (otomatik yönlendirme)
+  /fixtures         → FixturesPage
+  /leaderboard      → LeaderboardPage
+  /predict/:matchId → PredictPage
 
-Load `dist/index.html` in a Hippo WebView. The bridge auto-selects:
-- `HippoSDKBridge` if `@gethippoai/host-sdk` is installed and detects a Hippo host
-- `PostMessageBridge` if `window.ReactNativeWebView` is present
+  createHashRouter kullanılıyor — host uygulamanın URL sistemiyle çakışmamak için hash-based (#/fixtures gibi).
 
----
+  Veri Akışı
 
-## Bridge Auto-Detection
+  TanStack Query ile cache'li veri çekimi:
 
-`BridgeProvider.tsx` runs this detection sequence on mount:
+  useFixtures()        → GET /fixtures          (staleTime: 30s)
+  useFixture(id)       → GET /fixtures/:id      (staleTime: 30s)
+  useHeadToHead(id)    → GET /fixtures/:id/head2head  (staleTime: 5dk)
+  usePredictions()     → GET /predictions       (staleTime: 60s)
+  useLeaderboard()     → GET /leaderboard       (staleTime: 30s)
 
-```
-1. VITE_MOCK_MODE=true?  ──► MockBridge (always, skips detection)
-2. @gethippoai/host-sdk installed AND reports isAvailable()?
-                         ──► HippoSDKBridge
-3. window.ReactNativeWebView exists?
-                         ──► PostMessageBridge
-4. Otherwise             ──► MockBridge (+ console.warn)
-```
+  API isteklerinde bridge'den alınan JWT token Authorization: Bearer <token> header'ına ekleniyor.
 
-The selected bridge is exposed via `useBridge()`:
+  Ekranlar
 
-```tsx
-import { useBridge } from '@/bridge';
+  FixturesPage — Maç listesi:
+  - Filtreler: Tümü / Bugün / Bu Hafta
+  - Liga dropdown'u (dinamik, maçlardan çıkarılıyor)
+  - Her maç kartında: skor/dakika/durum + kullanıcının tahmini (varsa)
+  - live maçta anlık puan beklentisi gösteriyor (potansiyel +1 veya +3)
+  - finished maçta ilk yarı skoru gösteriyor
 
-function MyComponent() {
-  const { bridge, bridgeType } = useBridge();
-  // bridgeType: 'sdk' | 'postmessage' | 'mock'
-}
-```
+  PredictPage — Tahmin ekranı:
+  - Mevcut tahmin varsa state'e yükleniyor (0-0 default yerine)
+  - Skor girişi: +/- butonlarıyla 0–15 arası
+  - H2H bölümü: geçmiş karşılaşmalar (veri varsa)
+  - Puan sistemi hatırlatıcısı: 3 / 1 / 0
+  - "Kaydet" veya "Güncelle" (tahmin durumuna göre)
 
----
+  LeaderboardPage — Sıralama:
+  - Tüm zamanlar / Haftalık / Aylık
+  - Kullanıcı araması (istemci tarafında filtre)
+  - "Senin sıran" kartı en üstte
 
-## Extending With New Bridge Messages
+  ---
+  API Tarafı (Backend)
 
-### Step 1 — Add the Zod schema to `src/bridge/types.ts`
+  Endpoint'ler
 
-```ts
-export const ScoreUpdatePayloadSchema = z.object({
-  matchId: z.string(),
-  homeScore: z.number(),
-  awayScore: z.number(),
-});
-```
+  GET  /fixtures               → Tüm maçlar
+  GET  /fixtures/:id           → Tek maç detayı
+  GET  /fixtures/:id/head2head → H2H (DB cache → football-data.org)
 
-### Step 2 — Add the method to the `HippoBridge` interface
+  GET  /predictions            → Kullanıcının tahminleri
+  POST /predictions            → Tahmin kaydet/güncelle (upsert)
 
-```ts
-interface HippoBridge {
-  // ... existing methods
-  onScoreUpdate(handler: (payload: z.infer<typeof ScoreUpdatePayloadSchema>) => void): () => void;
-}
-```
+  GET  /leaderboard            → Sıralama (page/limit/period)
 
-### Step 3 — Implement in all three bridges
+  POST /sync/fixtures          → Tüm fikstürü football-data.org'dan çek
+  POST /sync/live              → Bugünkü maçları güncelle (1-2 dk'da bir)
+  POST /sync/settle            → Bitmiş maçların puanlarını hesapla
+  POST /sync/settle/:matchId   → Tek maç settle
 
-- **MockBridge**: store handler, call it with fake data if needed
-- **PostMessageBridge**: send `SCORE_UPDATE` message, validate response with the schema
-- **HippoSDKBridge**: delegate to SDK method, normalise return type
+  Veritabanı Şeması
 
-### Step 4 — Use via the hook pattern
+  users          → Hippo JWT'den gelen kullanıcılar (id = JWT sub)
+  fixtures       → Maçlar (football-data.org'dan sync)
+    ├─ status: scheduled | live | finished | postponed
+    ├─ homeScore, awayScore, minute, injuryTime
+    └─ halfTimeHome, halfTimeAway
+  head_to_head   → H2H cache (matchId PK, 7 gün TTL, JSONB)
+  predictions    → Tahminler (matchId + userId = unique)
+    └─ outcome: home | draw | away
+       homeScore?, awayScore?, points?
 
-```ts
-useEffect(() => {
-  return bridge.on<ScoreUpdatePayload>('SCORE_UPDATE', (payload) => {
-    // validated payload
-  });
-}, [bridge]);
-```
+  Puan Sistemi (scoring.ts)
 
----
+  // Tam skor → 3 puan
+  if (pred.homeScore === result.homeScore && pred.awayScore === result.awayScore) return 3;
 
-## Project Structure
+  // Doğru kazanan/beraberlik → 1 puan
+  if (pred.outcome === actualOutcome(result)) return 1;
 
-```
-src/
-├── bridge/        — Bridge interface, three implementations, React provider
-├── api/           — Axios client + Zod-validated endpoint functions
-├── features/      — Page-level components (fixtures, predictions, leaderboard)
-├── components/    — Shared UI primitives and layout shell
-├── hooks/         — Bridge-aware React hooks
-├── lib/           — env validation, utils
-├── routes/        — React Router config
-└── types/         — Domain types and env.d.ts
-```
+  return 0;
 
----
+  Settle Mantığı
 
-## Environment Variables
+  POST /sync/live çağrıldığında:
+  1. football-data.org'dan bugünkü maçlar çekilir
+  2. DB'ye upsert edilir (skor, dakika, durum güncellenir)
+  3. settleMatches() çağrılır
 
-| Variable | Required | Description |
-|---|---|---|
-| `VITE_API_BASE_URL` | Yes | Base URL of the backend API |
-| `VITE_MOCK_MODE` | No | `true` to force MockBridge in all environments |
+  settleMatches():
+  - status = 'finished' ve points = null olan tahminleri bulur
+  - Her tahmin için calculatePoints() çalıştırır
+  - DB'ye yazar
 
-Validated at startup by `src/lib/env.ts` — the app throws immediately if `VITE_API_BASE_URL` is missing or not a valid URL.
+  ---
+  Güvenlik
+
+  Her API isteği Hippo'nun JWT token'ını doğrular (jose kütüphanesi, HS256). Token'da sub (userId) ve display_name var. Kullanıcı ilk tahmininde otomatik users tablosuna insert edilir — kayıt akışı yok.
+
+  ---
+  Geliştirme vs Production
+
+  ┌─────────────────────┬───────────────────────────────────────┬──────────────────────────────────────────┐
+  │        Ortam        │                Bridge                 │                   Veri                   │
+  ├─────────────────────┼───────────────────────────────────────┼──────────────────────────────────────────┤
+  │ VITE_MOCK_MODE=true │ MockBridge                            │ Hard-coded mock fixtures/predictions/H2H │
+  ├─────────────────────┼───────────────────────────────────────┼──────────────────────────────────────────┤
+  │ Dev (API çalışıyor) │ MockBridge                            │ Gerçek DB, gerçek football-data.org      │
+  ├─────────────────────┼───────────────────────────────────────┼──────────────────────────────────────────┤
+  │ Production          │ HippoSDKBridge veya PostMessageBridge │ Gerçek her şey                           │
+  └─────────────────────┴───────────────────────────────────────┴──────────────────────────────────────────┘
+
+  ---
+  Veri Akışı — Tipik Kullanıcı Yolculuğu
+
+  1. Hippo app plugini açar
+     → Bridge handshake (SDK/PostMessage/Mock)
+     → JWT token alınır
+     → Tema CSS'e yazılır
+
+  2. FixturesPage yüklenir
+     → GET /fixtures (token ile)
+     → GET /predictions (kullanıcının tahminleri)
+     → Maçlar + tahmin durumları birleştirilerek gösterilir
+
+  3. Kullanıcı bir maça tıklar → PredictPage
+     → GET /fixtures/:id (maç detayı)
+     → GET /fixtures/:id/head2head (H2H, DB cache miss ise football-data.org'a gider)
+     → GET /predictions (cache'de, tekrar istek atmaz)
+     → Mevcut tahmin varsa form pre-fill edilir
+
+  4. Kullanıcı skoru girir, "Kaydet"
+     → POST /predictions (upsert)
+     → Toast gösterilir
+     → /fixtures'a yönlendirme
+
+  5. Maç biter (sunucu tarafı, cron ile)
+     → POST /sync/live her 1-2 dakikada çalışır
+     → Skor DB'ye yazılır
+     → settleMatches() tahminlere puan verir
+
+  6. Kullanıcı sıralamaya bakar
+     → GET /leaderboard
+     → Kendi sırası vurgulanır
