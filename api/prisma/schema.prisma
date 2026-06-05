@@ -1,0 +1,58 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String       @id
+  name        String?
+  createdAt   DateTime     @default(now())
+  predictions Prediction[]
+
+  @@map("users")
+}
+
+model Fixture {
+  id           String       @id
+  homeTeam     String
+  awayTeam     String
+  homeBadge    String?
+  awayBadge    String?
+  leagueId     String
+  leagueName   String
+  kickoff      DateTime
+  status       String       @default("scheduled")
+  homeScore    Int?
+  awayScore    Int?
+  halftimeHome Int?
+  halftimeAway Int?
+  minute       Int?
+  syncedAt     DateTime     @default(now())
+  predictions  Prediction[]
+
+  @@index([status, kickoff])
+  @@map("fixtures")
+}
+
+model Prediction {
+  id        String    @id @default(uuid())
+  userId    String
+  matchId   String
+  homeScore Int
+  awayScore Int
+  outcome   String
+  points    Int?
+  settledAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fixture   Fixture   @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, matchId])
+  @@index([userId, points])
+  @@map("predictions")
+}
