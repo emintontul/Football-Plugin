@@ -109,8 +109,10 @@ async function fetchEvents(url: string): Promise<TheSportsDBEvent[]> {
 }
 
 // eventsnextleague / eventspastleague require a paid TheSportsDB key. The
-// free /3/ key only exposes per-day queries, so we walk a date window and
-// keep events whose idLeague is in our LEAGUES allowlist.
+// free /3/ key only exposes per-day queries, so we walk a date window. The
+// LEAGUES allowlist (top-5 European) is honored when those leagues have
+// active matches; otherwise (off-season summer window) we surface whatever
+// Soccer events the day returns so the marketplace UI isn't empty.
 const LEAGUE_SET = new Set<string>(LEAGUES);
 
 function isoDate(d: Date): string {
@@ -122,7 +124,8 @@ async function fetchEventsForDate(date: string): Promise<TheSportsDBEvent[]> {
 }
 
 async function fetchEventsInWindow(startDays: number, endDays: number): Promise<TheSportsDBEvent[]> {
-  const out: TheSportsDBEvent[] = [];
+  const matched: TheSportsDBEvent[] = [];
+  const fallback: TheSportsDBEvent[] = [];
   const today = new Date();
   today.setUTCHours(0, 0, 0, 0);
   for (let i = startDays; i <= endDays; i++) {
@@ -130,10 +133,11 @@ async function fetchEventsInWindow(startDays: number, endDays: number): Promise<
     day.setUTCDate(today.getUTCDate() + i);
     const events = await fetchEventsForDate(isoDate(day));
     for (const ev of events) {
-      if (ev.idLeague && LEAGUE_SET.has(ev.idLeague)) out.push(ev);
+      if (ev.idLeague && LEAGUE_SET.has(ev.idLeague)) matched.push(ev);
+      else fallback.push(ev);
     }
   }
-  return out;
+  return matched.length > 0 ? matched : fallback;
 }
 
 export async function fetchUpcomingForLeague(_leagueId: string): Promise<TheSportsDBEvent[]> {
