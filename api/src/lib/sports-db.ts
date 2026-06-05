@@ -108,12 +108,42 @@ async function fetchEvents(url: string): Promise<TheSportsDBEvent[]> {
   return body.events ?? [];
 }
 
-export async function fetchUpcomingForLeague(leagueId: string): Promise<TheSportsDBEvent[]> {
-  return fetchEvents(`${BASE}/eventsnextleague.php?id=${encodeURIComponent(leagueId)}`);
+// eventsnextleague / eventspastleague require a paid TheSportsDB key. The
+// free /3/ key only exposes per-day queries, so we walk a date window and
+// keep events whose idLeague is in our LEAGUES allowlist.
+const LEAGUE_SET = new Set<string>(LEAGUES);
+
+function isoDate(d: Date): string {
+  return d.toISOString().slice(0, 10);
 }
 
-export async function fetchPastForLeague(leagueId: string): Promise<TheSportsDBEvent[]> {
-  return fetchEvents(`${BASE}/eventspastleague.php?id=${encodeURIComponent(leagueId)}`);
+async function fetchEventsForDate(date: string): Promise<TheSportsDBEvent[]> {
+  return fetchEvents(`${BASE}/eventsday.php?d=${date}&s=Soccer`);
+}
+
+async function fetchEventsInWindow(startDays: number, endDays: number): Promise<TheSportsDBEvent[]> {
+  const out: TheSportsDBEvent[] = [];
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  for (let i = startDays; i <= endDays; i++) {
+    const day = new Date(today);
+    day.setUTCDate(today.getUTCDate() + i);
+    const events = await fetchEventsForDate(isoDate(day));
+    for (const ev of events) {
+      if (ev.idLeague && LEAGUE_SET.has(ev.idLeague)) out.push(ev);
+    }
+  }
+  return out;
+}
+
+export async function fetchUpcomingForLeague(_leagueId: string): Promise<TheSportsDBEvent[]> {
+  // Kept signature-compatible with the cron's old per-league fan-out, but
+  // collapsed to a single window fetch — we filter client-side anyway.
+  return fetchEventsInWindow(0, 7);
+}
+
+export async function fetchPastForLeague(_leagueId: string): Promise<TheSportsDBEvent[]> {
+  return fetchEventsInWindow(-3, 0);
 }
 
 export async function fetchEvent(eventId: string): Promise<TheSportsDBEvent | null> {

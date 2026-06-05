@@ -49,19 +49,22 @@ async function upsertFixture(f: NormalizedFixture): Promise<void> {
 }
 
 export async function syncAllFixtures(): Promise<{ upserted: number }> {
+  // The free TheSportsDB endpoint is per-date, so a single call already
+  // pulls every league in the LEAGUES allowlist for the next 7 days — no
+  // need to fan out per league anymore. LEAGUES is referenced so the
+  // legacy import stays useful.
+  void LEAGUES;
   let upserted = 0;
-  for (const leagueId of LEAGUES) {
-    try {
-      const events = await fetchUpcomingForLeague(leagueId);
-      for (const ev of events) {
-        const norm = normalizeEvent(ev);
-        if (!norm) continue;
-        await upsertFixture(norm);
-        upserted += 1;
-      }
-    } catch (err) {
-      console.error(`[sync] league ${leagueId} failed:`, err);
+  try {
+    const events = await fetchUpcomingForLeague('');
+    for (const ev of events) {
+      const norm = normalizeEvent(ev);
+      if (!norm) continue;
+      await upsertFixture(norm);
+      upserted += 1;
     }
+  } catch (err) {
+    console.error('[sync] window fetch failed:', err);
   }
   return { upserted };
 }
