@@ -51,5 +51,10 @@
   "leaderboard.col.player": "Spieler",
   "leaderboard.col.points": "Punkte",
   "leaderboard.noResults": "Kein Spieler für \"{search}\" gefunden",
-  "common.offline": "Sie sind offline — Tipps werden möglicherweise nicht gespeichert"
+  "common.offline": "Sie sind offline — Tipps werden möglicherweise nicht gespeichert",
+  "mypredictions.title": "Meine Tipps",
+  "mypredictions.empty": "Noch keine Tipps.",
+  "mypredictions.error": "Tipps konnten nicht geladen werden",
+  "mypredictions.predicted": "Dein Tipp",
+  "mypredictions.result": "Ergebnis"
 }

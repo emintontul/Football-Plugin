@@ -51,5 +51,10 @@
   "leaderboard.col.player": "Speler",
   "leaderboard.col.points": "Punten",
   "leaderboard.noResults": "Geen speler gevonden voor \"{search}\"",
-  "common.offline": "Je bent offline — voorspellingen worden mogelijk niet opgeslagen"
+  "common.offline": "Je bent offline — voorspellingen worden mogelijk niet opgeslagen",
+  "mypredictions.title": "Mijn voorspellingen",
+  "mypredictions.empty": "Nog geen voorspellingen.",
+  "mypredictions.error": "Voorspellingen konden niet worden geladen",
+  "mypredictions.predicted": "Jouw voorspelling",
+  "mypredictions.result": "Uitslag"
 }

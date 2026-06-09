@@ -51,5 +51,10 @@
   "leaderboard.col.player": "Player",
   "leaderboard.col.points": "Points",
   "leaderboard.noResults": "No player found matching \"{search}\"",
-  "common.offline": "You're offline — predictions may not be saved"
+  "common.offline": "You're offline — predictions may not be saved",
+  "mypredictions.title": "My Predictions",
+  "mypredictions.empty": "No predictions yet.",
+  "mypredictions.error": "Failed to load predictions",
+  "mypredictions.predicted": "Your pick",
+  "mypredictions.result": "Result"
 }

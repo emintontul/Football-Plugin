@@ -1,6 +1,6 @@
 import { Suspense } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
-import { CalendarDays, Trophy } from 'lucide-react';
+import { CalendarDays, ListChecks, Trophy } from 'lucide-react';
 import { useOnline } from '@/hooks/useOnline';
 import { PageSkeleton } from '@/components/ui/Skeleton';
 import { useTranslation } from '@/i18n/TranslationProvider';
@@ -27,8 +27,9 @@ export function AppLayout() {
   const { t } = useTranslation();
 
   const TABS: Array<{ to: string; label: string; Icon: LucideIcon }> = [
-    { to: '/fixtures',    label: t('fixtures.title'),    Icon: CalendarDays },
-    { to: '/leaderboard', label: t('leaderboard.title'), Icon: Trophy },
+    { to: '/fixtures',    label: t('fixtures.title'),       Icon: CalendarDays },
+    { to: '/predictions', label: t('mypredictions.title'),  Icon: ListChecks },
+    { to: '/leaderboard', label: t('leaderboard.title'),    Icon: Trophy },
   ];
 
   return (

@@ -51,5 +51,10 @@
   "leaderboard.col.player": "Oyuncu",
   "leaderboard.col.points": "Puan",
   "leaderboard.noResults": "\"{search}\" ile eşleşen oyuncu bulunamadı",
-  "common.offline": "Çevrimdışısınız — tahminler kaydedilmeyebilir"
+  "common.offline": "Çevrimdışısınız — tahminler kaydedilmeyebilir",
+  "mypredictions.title": "Tahminlerim",
+  "mypredictions.empty": "Henüz tahmin yapmadın.",
+  "mypredictions.error": "Tahminler yüklenemedi",
+  "mypredictions.predicted": "Tahminin",
+  "mypredictions.result": "Sonuç"
 }

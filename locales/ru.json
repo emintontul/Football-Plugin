@@ -51,5 +51,10 @@
   "leaderboard.col.player": "Игрок",
   "leaderboard.col.points": "Очки",
   "leaderboard.noResults": "Игрок \"{search}\" не найден",
-  "common.offline": "Вы офлайн — прогнозы могут не сохраниться"
+  "common.offline": "Вы офлайн — прогнозы могут не сохраниться",
+  "mypredictions.title": "Мои прогнозы",
+  "mypredictions.empty": "Пока нет прогнозов.",
+  "mypredictions.error": "Не удалось загрузить прогнозы",
+  "mypredictions.predicted": "Ваш прогноз",
+  "mypredictions.result": "Результат"
 }

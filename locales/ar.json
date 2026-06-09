@@ -51,5 +51,10 @@
   "leaderboard.col.player": "اللاعب",
   "leaderboard.col.points": "النقاط",
   "leaderboard.noResults": "لم يُعثر على لاعب يطابق \"{search}\"",
-  "common.offline": "أنت غير متصل — قد لا يتم حفظ التوقّعات"
+  "common.offline": "أنت غير متصل — قد لا يتم حفظ التوقّعات",
+  "mypredictions.title": "توقعاتي",
+  "mypredictions.empty": "لا توجد توقعات بعد.",
+  "mypredictions.error": "تعذر تحميل التوقعات",
+  "mypredictions.predicted": "توقعك",
+  "mypredictions.result": "النتيجة"
 }

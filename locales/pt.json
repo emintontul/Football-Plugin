@@ -51,5 +51,10 @@
   "leaderboard.col.player": "Jogador",
   "leaderboard.col.points": "Pontos",
   "leaderboard.noResults": "Nenhum jogador encontrado para \"{search}\"",
-  "common.offline": "Você está offline — os palpites podem não ser salvos"
+  "common.offline": "Você está offline — os palpites podem não ser salvos",
+  "mypredictions.title": "Meus palpites",
+  "mypredictions.empty": "Ainda não há palpites.",
+  "mypredictions.error": "Falha ao carregar os palpites",
+  "mypredictions.predicted": "Seu palpite",
+  "mypredictions.result": "Resultado"
 }

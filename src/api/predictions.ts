@@ -1,6 +1,11 @@
 import { z } from 'zod';
 import { apiClient } from './client';
 
+const PredictionTeamSchema = z.object({
+  name: z.string(),
+  logoUrl: z.string().url().optional(),
+});
+
 const PredictionSchema = z.object({
   id: z.string(),
   matchId: z.string(),
@@ -10,7 +15,16 @@ const PredictionSchema = z.object({
   awayScore: z.number().int().optional(),
   points: z.number().optional(),
   createdAt: z.string().datetime(),
+  homeTeam: PredictionTeamSchema.optional(),
+  awayTeam: PredictionTeamSchema.optional(),
+  kickoffAt: z.string().datetime().optional(),
+  status: z.enum(['scheduled', 'live', 'finished', 'postponed']).optional(),
+  competition: z.string().optional(),
+  finalHome: z.number().int().optional(),
+  finalAway: z.number().int().optional(),
 });
+
+export type Prediction = z.infer<typeof PredictionSchema>;
 
 const PredictionsResponseSchema = z.object({
   data: z.array(PredictionSchema),

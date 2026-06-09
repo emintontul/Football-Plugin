@@ -51,5 +51,10 @@
   "leaderboard.col.player": "Jugador",
   "leaderboard.col.points": "Puntos",
   "leaderboard.noResults": "No se encontró ningún jugador para \"{search}\"",
-  "common.offline": "Estás sin conexión — es posible que las predicciones no se guarden"
+  "common.offline": "Estás sin conexión — es posible que las predicciones no se guarden",
+  "mypredictions.title": "Mis pronósticos",
+  "mypredictions.empty": "Aún no hay pronósticos.",
+  "mypredictions.error": "No se pudieron cargar los pronósticos",
+  "mypredictions.predicted": "Tu pronóstico",
+  "mypredictions.result": "Resultado"
 }
