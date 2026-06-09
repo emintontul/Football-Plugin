@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { prisma } from '../db.js';
 import { requireAuth } from '../auth.js';
+import { LEAGUES } from '../lib/sports-db.js';
 import type { Fixture } from '@prisma/client';
 
 type Vars = { Variables: { userId: string; userName: string | null } };
@@ -44,9 +45,17 @@ function serializeFixture(fx: Fixture) {
 }
 
 app.get('/', async (c) => {
-  const fixtures = await prisma.fixture.findMany({
+  // Only surface curated leagues (the allowlist). Old fixtures from earlier
+  // off-season fallback syncs stay in the DB (predictions reference them) but
+  // are hidden here. Fall back to all only if the allowlist yields nothing,
+  // so the marketplace is never empty.
+  const allowed = await prisma.fixture.findMany({
+    where: { leagueId: { in: [...LEAGUES] } },
     orderBy: { kickoff: 'asc' },
   });
+  const fixtures = allowed.length > 0
+    ? allowed
+    : await prisma.fixture.findMany({ orderBy: { kickoff: 'asc' } });
   return c.json({ data: fixtures.map(serializeFixture) });
 });
 
