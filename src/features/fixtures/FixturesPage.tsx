@@ -77,7 +77,11 @@ type MatchCardProps = {
 
 function MatchCard({ match, prediction, onPredict }: MatchCardProps) {
   const { t, locale } = useTranslation();
-  const canPredict = match.status === 'scheduled' && !prediction;
+  // A fixture whose kickoff has passed can't be predicted even if its status
+  // hasn't flipped to live/finished yet (stale feed). Gate on time too, so the
+  // UI matches what the API will accept.
+  const started    = new Date(match.kickoffAt).getTime() <= Date.now();
+  const canPredict = match.status === 'scheduled' && !started && !prediction;
   const isLive     = match.status === 'live';
   const isFinished = match.status === 'finished';
 
@@ -147,6 +151,8 @@ function MatchCard({ match, prediction, onPredict }: MatchCardProps) {
                 </span>
               )}
             </div>
+          ) : started ? (
+            <span className="text-[20px] font-medium tabular-nums text-hippo-muted">–</span>
           ) : (
             <button
               onClick={(e) => { e.stopPropagation(); onPredict(match.id); }}
