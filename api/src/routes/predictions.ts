@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { prisma } from '../db.js';
 import { requireAuth } from '../auth.js';
 import { deriveOutcome } from '../lib/scoring.js';
-import type { Prediction } from '@prisma/client';
+import type { Prediction, Fixture } from '@prisma/client';
 
 type Vars = { Variables: { userId: string; userName: string | null } };
 
@@ -17,7 +17,7 @@ const createSchema = z.object({
   awayScore: z.number().int().min(0).max(15),
 });
 
-function serialize(p: Prediction) {
+function serialize(p: Prediction & { fixture?: Fixture | null }) {
   return {
     id: p.id,
     matchId: p.matchId,
@@ -27,6 +27,18 @@ function serialize(p: Prediction) {
     awayScore: p.awayScore,
     ...(p.points !== null ? { points: p.points } : {}),
     createdAt: p.createdAt.toISOString(),
+    ...(p.fixture
+      ? {
+          homeTeam: {
+            name: p.fixture.homeTeam,
+            ...(p.fixture.homeBadge ? { logoUrl: p.fixture.homeBadge } : {}),
+          },
+          awayTeam: {
+            name: p.fixture.awayTeam,
+            ...(p.fixture.awayBadge ? { logoUrl: p.fixture.awayBadge } : {}),
+          },
+        }
+      : {}),
   };
 }
 
@@ -35,6 +47,7 @@ app.get('/', async (c) => {
   const predictions = await prisma.prediction.findMany({
     where: { userId },
     orderBy: { createdAt: 'desc' },
+    include: { fixture: true },
   });
   return c.json({ data: predictions.map(serialize) });
 });
@@ -83,6 +96,7 @@ app.post('/', async (c) => {
       points: null,
       settledAt: null,
     },
+    include: { fixture: true },
   });
 
   return c.json(serialize(prediction));
