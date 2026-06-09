@@ -129,7 +129,7 @@ function MatchCard({ match, prediction, onPredict }: MatchCardProps) {
 
       <div className="flex items-center justify-between px-4 py-5">
         <div className="flex flex-1 flex-col items-center gap-1.5 min-w-0">
-          <TeamLogo shortName={match.homeTeam.shortName} size={48} />
+          <TeamLogo shortName={match.homeTeam.shortName} logoUrl={match.homeTeam.logoUrl} size={48} />
           <span className="text-center text-[13px] font-medium leading-tight text-hippo-fg break-words">
             {match.homeTeam.name}
           </span>
@@ -158,7 +158,7 @@ function MatchCard({ match, prediction, onPredict }: MatchCardProps) {
         </div>
 
         <div className="flex flex-1 flex-col items-center gap-1.5 min-w-0">
-          <TeamLogo shortName={match.awayTeam.shortName} size={48} />
+          <TeamLogo shortName={match.awayTeam.shortName} logoUrl={match.awayTeam.logoUrl} size={48} />
           <span className="text-center text-[13px] font-medium leading-tight text-hippo-fg break-words">
             {match.awayTeam.name}
           </span>

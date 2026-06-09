@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 const TEAM_COLORS: Record<string, string> = {
   GS: '#FDB913', FB: '#003DA5', BJK: '#111827', TS: '#8B0000',
   BAS: '#D85F1E', ADS: '#1B4F8B', SIV: '#0066B3', KYS: '#d97706',
@@ -7,9 +9,9 @@ const TEAM_COLORS: Record<string, string> = {
   TOT: '#132257', MUN: '#DA291C', ATM: '#CB3524', SEV: '#CB3524',
 };
 
-type Props = { shortName: string; size?: number };
+type Props = { shortName: string; logoUrl?: string; size?: number };
 
-export function TeamLogo({ shortName, size = 40 }: Props) {
+function InitialsBadge({ shortName, size }: { shortName: string; size: number }) {
   const bg = TEAM_COLORS[shortName] ?? '#6b7280';
   return (
     <div
@@ -23,5 +25,27 @@ export function TeamLogo({ shortName, size = 40 }: Props) {
     >
       {shortName.slice(0, 2)}
     </div>
+  );
+}
+
+export function TeamLogo({ shortName, logoUrl, size = 40 }: Props) {
+  const [failed, setFailed] = useState(false);
+
+  if (!logoUrl || failed) {
+    return <InitialsBadge shortName={shortName} size={size} />;
+  }
+
+  return (
+    <img
+      src={logoUrl}
+      alt={shortName}
+      width={size}
+      height={size}
+      onError={() => setFailed(true)}
+      style={{
+        width: size, height: size, flexShrink: 0,
+        objectFit: 'contain', borderRadius: '50%',
+      }}
+    />
   );
 }

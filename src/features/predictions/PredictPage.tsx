@@ -206,14 +206,14 @@ export function PredictPage() {
       >
         <div className="flex w-full items-center justify-center gap-5">
           <div className="flex flex-1 flex-col items-center gap-1.5">
-            <TeamLogo shortName={match.homeTeam.shortName} size={48} />
+            <TeamLogo shortName={match.homeTeam.shortName} logoUrl={match.homeTeam.logoUrl} size={48} />
             <span className="text-center text-[13px] font-medium leading-tight opacity-95">
               {match.homeTeam.name}
             </span>
           </div>
           <span className="flex-shrink-0 rounded-full border border-white/30 bg-white/15 px-2.5 py-0.5 text-[11px] font-semibold tracking-widest opacity-80">VS</span>
           <div className="flex flex-1 flex-col items-center gap-1.5">
-            <TeamLogo shortName={match.awayTeam.shortName} size={48} />
+            <TeamLogo shortName={match.awayTeam.shortName} logoUrl={match.awayTeam.logoUrl} size={48} />
             <span className="text-center text-[13px] font-medium leading-tight opacity-95">
               {match.awayTeam.name}
             </span>

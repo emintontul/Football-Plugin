@@ -2,16 +2,17 @@ import type { HippoBridge } from './types';
 
 const DEFAULT_THEME_TOKENS: Record<string, string> = {
   '--hippo-bg': '#ffffff',
-  '--hippo-fg': '#111827',
-  '--hippo-primary': '#2563eb',
+  '--hippo-fg': '#000000',
+  '--hippo-primary': '#5445c2',
   '--hippo-primary-fg': '#ffffff',
-  '--hippo-secondary': '#f3f4f6',
-  '--hippo-secondary-fg': '#374151',
-  '--hippo-surface': '#f9fafb',
-  '--hippo-border': '#e5e7eb',
-  '--hippo-muted': '#6b7280',
-  '--hippo-muted-fg': '#9ca3af',
-  '--hippo-error': '#ef4444',
+  '--hippo-primary-light': '#ECEAF8',
+  '--hippo-secondary': '#EDEDF0',
+  '--hippo-secondary-fg': '#60646C',
+  '--hippo-surface': '#F5F5F7',
+  '--hippo-border': '#E2E2E5',
+  '--hippo-muted': '#60646C',
+  '--hippo-muted-fg': '#8B8D98',
+  '--hippo-error': '#FF3B30',
   '--hippo-success': '#22c55e',
 };
 
