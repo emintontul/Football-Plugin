@@ -69,15 +69,29 @@ export async function syncAllFixtures(): Promise<{ upserted: number }> {
   return { upserted };
 }
 
-export async function settleMatch(matchId: string): Promise<{ settled: number }> {
+export type SettledResult = {
+  userId: string;
+  home: string;
+  away: string;
+  homeBadge: string | null;
+  awayBadge: string | null;
+  homeScore: number;
+  awayScore: number;
+  predHome: number;
+  predAway: number;
+  points: number;
+  correct: boolean;
+};
+
+export async function settleMatch(matchId: string): Promise<{ settled: number; results: SettledResult[] }> {
   const fixture = await prisma.fixture.findUnique({ where: { id: matchId } });
   if (!fixture || fixture.status !== 'finished' || fixture.homeScore === null || fixture.awayScore === null) {
-    return { settled: 0 };
+    return { settled: 0, results: [] };
   }
   const predictions = await prisma.prediction.findMany({
     where: { matchId, settledAt: null },
   });
-  let settled = 0;
+  const results: SettledResult[] = [];
   for (const p of predictions) {
     const points = computePoints(
       { homeScore: p.homeScore, awayScore: p.awayScore, outcome: p.outcome },
@@ -87,9 +101,75 @@ export async function settleMatch(matchId: string): Promise<{ settled: number }>
       where: { id: p.id },
       data: { points, settledAt: new Date() },
     });
-    settled += 1;
+    results.push({
+      userId: p.userId,
+      home: fixture.homeTeam,
+      away: fixture.awayTeam,
+      homeBadge: fixture.homeBadge,
+      awayBadge: fixture.awayBadge,
+      homeScore: fixture.homeScore,
+      awayScore: fixture.awayScore,
+      predHome: p.homeScore,
+      predAway: p.awayScore,
+      points,
+      correct: points > 0,
+    });
   }
-  return { settled };
+  return { settled: results.length, results };
+}
+
+// After a cron tick settles matches, notify hippo-backend so it can push each
+// user a "result + standing" message. Grouped per user → one message per tick.
+async function notifySettlements(results: SettledResult[]): Promise<void> {
+  const baseUrl = process.env.HIPPO_BACKEND_URL;
+  const secret = process.env.HIPPO_INTERNAL_SECRET;
+  if (!baseUrl || !secret || results.length === 0) return;
+
+  // All-time standings snapshot: total points per user + rank.
+  const settledRows = await prisma.prediction.findMany({
+    where: { settledAt: { not: null } },
+    select: { userId: true, points: true },
+  });
+  const totals = new Map<string, number>();
+  for (const r of settledRows) totals.set(r.userId, (totals.get(r.userId) || 0) + (r.points || 0));
+  const ranked = [...totals.entries()].sort((a, b) => b[1] - a[1]);
+  const rankOf = (uid: string) => {
+    const idx = ranked.findIndex(([u]) => u === uid);
+    return idx >= 0 ? idx + 1 : null;
+  };
+
+  const byUser = new Map<string, SettledResult[]>();
+  for (const r of results) {
+    const arr = byUser.get(r.userId) || [];
+    arr.push(r);
+    byUser.set(r.userId, arr);
+  }
+
+  for (const [userId, matches] of byUser) {
+    const tickId = `${matches.map((m) => `${m.home}${m.homeScore}${m.awayScore}`).join('_')}`.slice(0, 70);
+    try {
+      const res = await fetch(`${baseUrl.replace(/\/$/, '')}/internal/football/settled`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Internal-Secret': secret },
+        body: JSON.stringify({
+          hippoUserId: userId,
+          matches: matches.map((m) => ({
+            home: m.home, away: m.away,
+            homeBadge: m.homeBadge, awayBadge: m.awayBadge,
+            homeScore: m.homeScore, awayScore: m.awayScore,
+            predHome: m.predHome, predAway: m.predAway,
+            points: m.points, correct: m.correct,
+          })),
+          totalPoints: totals.get(userId) || 0,
+          rank: rankOf(userId),
+          tickId,
+        }),
+      });
+      if (!res.ok) console.error(`[notify] ${userId} → HTTP ${res.status}`);
+    } catch (err) {
+      console.error(`[notify] ${userId} failed:`, err);
+    }
+  }
 }
 
 export async function refreshLiveFixtures(): Promise<{ refreshed: number; settled: number }> {
@@ -105,6 +185,7 @@ export async function refreshLiveFixtures(): Promise<{ refreshed: number; settle
   });
   let refreshed = 0;
   let settledTotal = 0;
+  const tickResults: SettledResult[] = [];
   for (const fx of candidates) {
     try {
       const ev = await fetchEvent(fx.id);
@@ -115,12 +196,17 @@ export async function refreshLiveFixtures(): Promise<{ refreshed: number; settle
       await upsertFixture(norm);
       refreshed += 1;
       if (!wasFinished && norm.status === 'finished') {
-        const { settled } = await settleMatch(fx.id);
+        const { settled, results } = await settleMatch(fx.id);
         settledTotal += settled;
+        tickResults.push(...results);
       }
     } catch (err) {
       console.error(`[live] fixture ${fx.id} failed:`, err);
     }
+  }
+  // Notify hippo-backend once for everything settled in this tick (per user).
+  if (tickResults.length > 0) {
+    await notifySettlements(tickResults).catch((err) => console.error('[notify] tick failed:', err));
   }
   return { refreshed, settled: settledTotal };
 }
