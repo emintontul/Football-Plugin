@@ -37,6 +37,13 @@ function serialize(p: Prediction & { fixture?: Fixture | null }) {
             name: p.fixture.awayTeam,
             ...(p.fixture.awayBadge ? { logoUrl: p.fixture.awayBadge } : {}),
           },
+          kickoffAt: p.fixture.kickoff.toISOString(),
+          status: p.fixture.status as 'scheduled' | 'live' | 'finished' | 'postponed',
+          competition: p.fixture.leagueName,
+          // Actual match result (present once played) — distinct from the
+          // user's predicted homeScore/awayScore above.
+          ...(p.fixture.homeScore !== null ? { finalHome: p.fixture.homeScore } : {}),
+          ...(p.fixture.awayScore !== null ? { finalAway: p.fixture.awayScore } : {}),
         }
       : {}),
   };
