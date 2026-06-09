@@ -1,6 +1,29 @@
 const BASE = 'https://www.thesportsdb.com/api/v1/json/3';
 
-export const LEAGUES = ['4328', '4335', '4332', '4331', '4480'] as const;
+// Allowlist of leagues the marketplace surfaces. Popular international /
+// top-European competitions plus German lower divisions (4BRO is German-
+// focused). When none of these have matches in the window, the cron falls
+// back to any Soccer event so the UI is never empty.
+export const LEAGUES = [
+  // International / popular tournaments
+  '4429', // FIFA World Cup
+  '4503', // FIFA Club World Cup
+  '4502', // UEFA Euro
+  '4480', // UEFA Champions League
+  '4481', // UEFA Europa League
+  // Top European leagues
+  '4328', // English Premier League
+  '4335', // Spanish La Liga
+  '4332', // Italian Serie A
+  '4334', // French Ligue 1
+  '4339', // Turkish Süper Lig
+  // German football (top + lower divisions)
+  '4331', // German Bundesliga
+  '4399', // German 2. Bundesliga
+  '4485', // DFB-Pokal
+  '4748', // German Regionalliga Bayern
+  '4749', // German Regionalliga Nordost
+] as const;
 
 export type TheSportsDBEvent = {
   idEvent: string;
